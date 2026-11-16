@@ -5,12 +5,39 @@ history, and retries after interrupted transfers. Supports macOS and POSIX Linux
 
 ## Install
 
-On macOS, install modern rsync first (Apple's bundled rsync is too old):
+### Homebrew (macOS and Linux)
+
+Homebrew installs bsync, Python, and modern rsync together:
 
 ```sh
-brew install rsync
-pipx install .
+brew install curtisray/tap/bsync
+bsync
 ```
+
+### pipx or uv
+
+Install from the pinned GitHub release using either installer:
+
+```sh
+pipx install 'git+https://github.com/curtisray/bsync.git@v0.2.1'
+# or
+uv tool install 'git+https://github.com/curtisray/bsync.git@v0.2.1'
+```
+
+Python-based installers require Python 3.10+ and rsync 3.1+. On macOS install
+rsync with `brew install rsync`; on Debian/Ubuntu use `sudo apt install rsync`.
+
+The Python distribution name is **better-rsync**, and the terminal command is
+**bsync**. The unrelated package named `bsync` on PyPI is a Box.com sync tool.
+PyPI publication is being configured; until it is live, use the pinned GitHub
+install commands above. After publication, `pipx install better-rsync`,
+`uv tool install better-rsync`, and `pip install better-rsync` will be available.
+Use a virtual environment for plain pip installs.
+
+Native Windows is not supported. On Windows, run bsync inside WSL with Linux
+Python and rsync. Winget, Scoop, and Chocolatey installers are not provided.
+
+### Development
 
 For development:
 
@@ -19,6 +46,9 @@ python3 -m venv .venv
 .venv/bin/pip install -e .
 .venv/bin/python -m unittest discover -s tests -v
 ```
+
+See [distribution and release instructions](docs/distribution.md) for
+maintainer setup, PyPI activation, and adding additional package managers.
 
 ## Use
 

@@ -22,6 +22,7 @@ from rich.live import Live
 from rich.table import Table
 from rich.text import Text
 
+__version__ = "0.2.1"
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -145,7 +146,10 @@ def endpoint(value: str) -> str:
 def find_rsync() -> str:
     candidate = os.environ.get("BSYNC_RSYNC")
     if not candidate:
-        candidate = "/opt/homebrew/bin/rsync" if Path("/opt/homebrew/bin/rsync").is_file() else shutil.which("rsync")
+        prefixes = ("/opt/homebrew", "/usr/local", "/home/linuxbrew/.linuxbrew")
+        candidate = next((str(Path(prefix) / "opt/rsync/bin/rsync") for prefix in prefixes
+                          if (Path(prefix) / "opt/rsync/bin/rsync").is_file()), None)
+        candidate = candidate or shutil.which("rsync")
     if not candidate:
         raise RuntimeError("Modern rsync is required. On macOS: brew install rsync")
     result = subprocess.run([candidate, "--version"], capture_output=True, text=True, timeout=10)
@@ -322,6 +326,7 @@ def show_history(history: History, console: Console, cutoff: bool = False):
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command")
     run = sub.add_parser("run", help="Start a monitored transfer")
     run.add_argument("src")
