@@ -1,4 +1,4 @@
-# bsync
+# Port
 
 A Python 3.10+ CLI that wraps modern rsync with Rich progress, durable SQLite
 history, and retries after interrupted transfers. Supports macOS and POSIX Linux.
@@ -7,11 +7,11 @@ history, and retries after interrupted transfers. Supports macOS and POSIX Linux
 
 ### Homebrew (macOS and Linux)
 
-Homebrew installs bsync, Python, and modern rsync together:
+Homebrew installs port, Python, and modern rsync together:
 
 ```sh
-brew install curtisray/tap/bsync
-bsync
+brew install curtisray/tap/port
+port
 ```
 
 ### pipx or uv
@@ -19,22 +19,26 @@ bsync
 Install from the pinned GitHub release using either installer:
 
 ```sh
-pipx install 'git+https://github.com/curtisray/bsync.git@v0.2.1'
+pipx install 'git+https://github.com/curtisray/port.git@v0.3.0'
 # or
-uv tool install 'git+https://github.com/curtisray/bsync.git@v0.2.1'
+uv tool install 'git+https://github.com/curtisray/port.git@v0.3.0'
 ```
 
 Python-based installers require Python 3.10+ and rsync 3.1+. On macOS install
 rsync with `brew install rsync`; on Debian/Ubuntu use `sudo apt install rsync`.
 
-The Python distribution name is **better-rsync**, and the terminal command is
-**bsync**. The unrelated package named `bsync` on PyPI is a Box.com sync tool.
+The Python distribution name and terminal command are both **port**.
 PyPI publication is being configured; until it is live, use the pinned GitHub
-install commands above. After publication, `pipx install better-rsync`,
-`uv tool install better-rsync`, and `pip install better-rsync` will be available.
+install commands above. After publication, `pipx install port`,
+`uv tool install port`, and `pip install port` will be available.
 Use a virtual environment for plain pip installs.
 
-Native Windows is not supported. On Windows, run bsync inside WSL with Linux
+Port is unrelated to MacPorts, whose package-manager command is also named
+`port`. If both are installed, use this tool's full path, such as
+`/opt/homebrew/bin/port` on Apple Silicon, or the compatibility command `bsync`.
+Port's installer does not replace MacPorts executables.
+
+Native Windows is not supported. On Windows, run port inside WSL with Linux
 Python and rsync. Winget, Scoop, and Chocolatey installers are not provided.
 
 ### Development
@@ -50,9 +54,27 @@ python3 -m venv .venv
 See [distribution and release instructions](docs/distribution.md) for
 maintainer setup, PyPI activation, and adding additional package managers.
 
+### Upgrading from bsync
+
+Port is the new name for bsync. Existing commands continue working through the
+`bsync` compatibility entry point. For Homebrew users:
+
+```sh
+brew update
+brew upgrade bsync
+port
+```
+
+The tap records the formula rename from `bsync` to `port`. Fresh installs use
+`brew install curtisray/tap/port`. Existing history is reused from
+`~/.bsync_history.db` when there is no `~/.port_history.db`. Old `BSYNC_DB` and
+`BSYNC_RSYNC` settings still work; `PORT_DB` and `PORT_RSYNC` take precedence.
+Previously recorded output folders and undo vaults keep their existing paths,
+so saved sessions can still resume or undo safely.
+
 ## Use
 
-Run `bsync` with no arguments in your terminal to open the guided interface.
+Run `port` with no arguments in your terminal to open the guided interface.
 Use **↑ / ↓** and **Enter** to choose commands; **Esc** returns to the menu.
 Each command includes a description of what it does.
 
@@ -85,13 +107,13 @@ You can revisit a session through the menu's history, resume, and undo commands.
 ### Reversible guided transfers
 
 Guided setup supports **local filesystems and mounted volumes**. Each destination
-gets a new `bsync-<session-id>/` folder containing the selected files and folders
+gets a new `port-<session-id>/` folder containing the selected files and folders
 under their original names. It never merges guided transfers into existing files.
 Sources must have distinct names and cannot contain each other. A destination
 cannot be inside a source. Selected symlinks are preserved as links.
 
 For **Move**, every destination copy must finish before originals are renamed into
-hidden `.bsync-<session-id>-<name>` vaults beside their original locations. The
+hidden `.port-<session-id>-<name>` vaults beside their original locations. The
 same-volume rename makes restoration fast and preserves the originals' metadata.
 **Move does not release source disk space until you explicitly discard these
 vaults.** Discarding them is permanent and disables undo for that session.
@@ -105,23 +127,23 @@ metadata check, not a content hash or protection against concurrent external edi
 avoid changing session files while a transfer, undo, or discard is active.
 
 Session plans and manifests persist in SQLite. Resume continues the whole plan,
-including all remaining sources and destinations. A numeric `bsync resume <id>`
+including all remaining sources and destinations. A numeric `port resume <id>`
 for an interrupted guided job also resumes its containing session. A hard kill
 may leave output that was not checkpointed; undo refuses unrecognized changes.
 Finish the session through Resume before attempting undo in that case. Keep the
 history database while you need undo or recovery. Undo cannot be retroactively
-provided for older direct `bsync run` transfers.
+provided for older direct `port run` transfers.
 
 ### Direct commands
 
 Existing commands remain available, including SSH/rsync daemon endpoints:
 
 ```sh
-bsync run /Volumes/Camera/ /Volumes/Backup/Camera/
-bsync run ./videos/ editor@studio:/media/videos/
-bsync history
-bsync cutoff
-bsync resume 12
+port run /Volumes/Camera/ /Volumes/Backup/Camera/
+port run ./videos/ editor@studio:/media/videos/
+port history
+port cutoff
+port resume 12
 ```
 
 Rsync's trailing-slash semantics apply: `videos/` copies its contents, while
@@ -132,7 +154,7 @@ files. Existing destination files may be replaced, as with normal rsync.
 The live display shows rsync's overall logical byte progress, speed, ETA, and
 current file. Discovery happens before transfer because incremental recursion is
 disabled. The time on a completed-file progress record is elapsed time rather
-than ETA, so bsync shows a dash for those records. Rsync's human-readable output
+than ETA, so port shows a dash for those records. Rsync's human-readable output
 may round large byte counts; they are progress estimates, not network byte totals.
 
 Ctrl+C and SIGTERM stop the rsync process group, save progress, and mark the job
@@ -153,8 +175,8 @@ surviving rsync process before retrying.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `BSYNC_DB` | `~/.bsync_history.db` | History database (with an adjacent `.lock` file) |
-| `BSYNC_RSYNC` | Homebrew rsync, then `PATH` | Explicit rsync executable; requires 3.1+ |
+| `PORT_DB` | `~/.port_history.db` | History database (with an adjacent `.lock` file) |
+| `PORT_RSYNC` | Homebrew rsync, then `PATH` | Explicit rsync executable; requires 3.1+ |
 
 The database records `id`, `src`, `dst`, `status`, `bytes_done`, `pct`,
 `started_at`, `ended_at`, and an optional guided `session_id`. A separate `sessions`

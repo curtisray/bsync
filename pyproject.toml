@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "better-rsync"
+name = "port"
 dynamic = ["version"]
 description = "Rsync with live progress, durable history, and interruption recovery"
 readme = "README.md"
@@ -27,16 +27,17 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/curtisray/bsync"
-Repository = "https://github.com/curtisray/bsync"
-Issues = "https://github.com/curtisray/bsync/issues"
-Releases = "https://github.com/curtisray/bsync/releases"
+Homepage = "https://github.com/curtisray/port"
+Repository = "https://github.com/curtisray/port"
+Issues = "https://github.com/curtisray/port/issues"
+Releases = "https://github.com/curtisray/port/releases"
 
 [project.scripts]
-bsync = "bsync:main"
+port = "port:main"
+bsync = "port:main"
 
 [tool.setuptools]
-py-modules = ["bsync", "bsync_ui", "bsync_sessions"]
+py-modules = ["port", "port_ui", "port_sessions", "bsync"]
 
 [tool.setuptools.dynamic]
-version = {attr = "bsync.__version__"}
+version = {attr = "port.__version__"}

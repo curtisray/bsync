@@ -32,10 +32,11 @@ jobs:
           fi
       - run: python -m pip install .
       - name: Verify required transfer engine
-        run: python -c 'import bsync; print(bsync.find_rsync())'
+        run: python -c 'import port; print(port.find_rsync())'
       - run: python -m unittest discover -s tests -v
       - name: Smoke test installed entry point outside the checkout
         working-directory: ${{ runner.temp }}
         run: |
+          port --version
+          port --help
           bsync --version
-          bsync --help

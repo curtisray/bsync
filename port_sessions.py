@@ -112,16 +112,16 @@ class Session:
         return {
             "id": sid, "mode": mode,
             "sources": [{"path": str(path), "name": path.name,
-                         "vault": str(path.parent / f".bsync-{sid}-{path.name}")}
+                         "vault": str(path.parent / f".port-{sid}-{path.name}")}
                         for path in selected],
-            "destinations": [{"path": str(dest), "root": str(dest / f"bsync-{sid}")}
+            "destinations": [{"path": str(dest), "root": str(dest / f"port-{sid}")}
                              for dest in targets],
         }
 
     @classmethod
     def create(cls, history, plan):
         if not history.owns_lock:
-            raise RuntimeError("Another bsync transfer is active.")
+            raise RuntimeError("Another port transfer is active.")
         state = {"sources": {}, "outputs": {}, "done": [], "allocated": []}
         # Complete preflight before creating any output folders.
         for source in plan["sources"]:
@@ -129,7 +129,7 @@ class Session:
                 raise RuntimeError(f"Undo vault already exists: {source['vault']}")
             state["sources"][source["path"]] = inventory(source["path"])
         session = cls(history, plan["id"], plan, state, "PREPARING")
-        from bsync import now
+        from port import now
         with history.db:
             history.db.execute("INSERT INTO sessions VALUES (?,?,?,?,?,?)",
                                (session.id, json.dumps(plan), json.dumps(state), session.status, now(), now()))
@@ -154,7 +154,7 @@ class Session:
         return cls(history, sid, json.loads(row["plan"]), json.loads(row["state"]), row["status"])
 
     def save(self, status=None):
-        from bsync import now
+        from port import now
         if status is not None:
             self.status = status
         with self.history.db:
@@ -163,7 +163,7 @@ class Session:
 
     def require_lock(self):
         if not self.history.owns_lock:
-            raise RuntimeError("Another bsync transfer is active.")
+            raise RuntimeError("Another port transfer is active.")
 
     def checkpoint_output(self, root, source):
         current = inventory(root)
@@ -182,7 +182,7 @@ class Session:
         self.state["outputs"][root] = current
 
     def run(self, console):
-        from bsync import run_transfer
+        from port import run_transfer
         self.require_lock()
         if self.status not in ("CUTOFF", "PREPARING"):
             raise RuntimeError(f"Session is {self.status}; it cannot be resumed.")

@@ -13,36 +13,36 @@ from unittest.mock import patch
 
 from rich.console import Console
 
-import bsync
+import port
 
 
 class ParserTests(unittest.TestCase):
     def test_progress_and_filename(self):
-        state = bsync.Snapshot()
-        self.assertTrue(bsync.parse_record("FILE:clips/[red] café.mov", state))
+        state = port.Snapshot()
+        self.assertTrue(port.parse_record("FILE:clips/[red] café.mov", state))
         self.assertEqual(state.filename, "clips/[red] café.mov")
-        self.assertTrue(bsync.parse_record(" 1,234,567  42%  12.34MB/s  0:01:23", state))
+        self.assertTrue(port.parse_record(" 1,234,567  42%  12.34MB/s  0:01:23", state))
         self.assertEqual((state.bytes_done, state.pct, state.eta), (1234567, 42, "0:01:23"))
-        bsync.parse_record(" 200.12G 100% 80.00MB/s 0:12:00 (xfr#1, to-chk=0/2)", state)
+        port.parse_record(" 200.12G 100% 80.00MB/s 0:12:00 (xfr#1, to-chk=0/2)", state)
         self.assertEqual(state.bytes_done, 200120000000)
         self.assertEqual(state.eta, "—")
-        self.assertFalse(bsync.parse_record("sent 42 bytes", state))
+        self.assertFalse(port.parse_record("sent 42 bytes", state))
 
     def test_endpoints(self):
-        self.assertEqual(bsync.endpoint("./clips/"), os.path.abspath("clips") + "/")
-        self.assertEqual(bsync.endpoint("/"), "/")
+        self.assertEqual(port.endpoint("./clips/"), os.path.abspath("clips") + "/")
+        self.assertEqual(port.endpoint("/"), "/")
         for endpoint in ("user@host:clips/", "rsync://host/module/", "[::1]:/clips/"):
-            self.assertEqual(bsync.endpoint(endpoint), endpoint)
+            self.assertEqual(port.endpoint(endpoint), endpoint)
 
 
 class HistoryTests(unittest.TestCase):
     def test_active_lock_and_crash_recovery(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "history.db"
-            first = bsync.History(path)
+            first = port.History(path)
             job_id = first.start("src", "dst")
-            first.update(job_id, bsync.Snapshot(bytes_done=123, pct=12))
-            observer = bsync.History(path)
+            first.update(job_id, port.Snapshot(bytes_done=123, pct=12))
+            observer = port.History(path)
             try:
                 self.assertEqual(observer.get(job_id)["status"], "RUNNING")
                 with self.assertRaises(RuntimeError):
@@ -50,14 +50,14 @@ class HistoryTests(unittest.TestCase):
             finally:
                 observer.close()
                 first.close()
-            recovered = bsync.History(path)
+            recovered = port.History(path)
             try:
                 row = recovered.get(job_id)
                 self.assertEqual((row["status"], row["bytes_done"], row["pct"]), ("CUTOFF", 123, 12))
                 self.assertIsNotNone(row["ended_at"])
                 for _ in range(22):
                     current = recovered.start("a", "b")
-                    recovered.update(current, bsync.Snapshot(), "COMPLETED")
+                    recovered.update(current, port.Snapshot(), "COMPLETED")
                 self.assertEqual(len(recovered.recent()), 20)
                 self.assertEqual(len(recovered.recent(True)), 1)
             finally:
@@ -83,13 +83,13 @@ class EngineTests(unittest.TestCase):
             "    print('\\nrsync: permission denied', file=sys.stderr); sys.exit(23)\n"
         )
         self.fake.chmod(0o755)
-        self.env = {**os.environ, "BSYNC_DB": str(self.db), "BSYNC_RSYNC": str(self.fake)}
+        self.env = {**os.environ, "PORT_DB": str(self.db), "PORT_RSYNC": str(self.fake)}
 
     def tearDown(self):
         self.temp.cleanup()
 
     def cli(self, *args, **env):
-        return subprocess.run([sys.executable, "-m", "bsync", *args],
+        return subprocess.run([sys.executable, "-m", "port", *args],
                               env={**self.env, **env}, capture_output=True, text=True, timeout=10)
 
     def row(self, job=1):
@@ -115,7 +115,7 @@ class EngineTests(unittest.TestCase):
     def test_signals_checkpoint_and_stop_child(self):
         for sig in (signal.SIGINT, signal.SIGTERM):
             with self.subTest(signal=sig):
-                process = subprocess.Popen([sys.executable, "-m", "bsync", "run", "a", "b"],
+                process = subprocess.Popen([sys.executable, "-m", "port", "run", "a", "b"],
                                            env={**self.env, "FAKE_WAIT": "1"},
                                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 try:
@@ -143,11 +143,11 @@ class EngineTests(unittest.TestCase):
                         process.communicate()
 
     def test_spawn_failure_marks_cutoff(self):
-        history = bsync.History(self.db)
+        history = port.History(self.db)
         try:
-            with patch("bsync.find_rsync", return_value="/nonexistent/rsync"):
+            with patch("port.find_rsync", return_value="/nonexistent/rsync"):
                 with self.assertRaises(OSError):
-                    bsync.run_transfer(history, "a", "b", Console(file=io.StringIO()))
+                    port.run_transfer(history, "a", "b", Console(file=io.StringIO()))
             self.assertEqual(history.get(1)["status"], "CUTOFF")
         finally:
             history.close()
@@ -164,11 +164,11 @@ class EngineTests(unittest.TestCase):
                 if self.events and time.monotonic() - self.started >= self.events[0][0]:
                     return self.events.pop(0)[1]
                 return ""
-        history = bsync.History(self.db)
+        history = port.History(self.db)
         try:
             with patch.dict(os.environ, {**self.env, "FAKE_WAIT": "1"}), \
-                    patch("bsync.os.killpg", wraps=os.killpg) as signals:
-                result = bsync.run_transfer(history, "a", "b", Console(file=io.StringIO()),
+                    patch("port.os.killpg", wraps=os.killpg) as signals:
+                result = port.run_transfer(history, "a", "b", Console(file=io.StringIO()),
                                             keyboard=ScriptedKeys())
             self.assertEqual(result, 130)
             sent = [call.args[1] for call in signals.call_args_list]
@@ -182,7 +182,7 @@ class EngineTests(unittest.TestCase):
 class RealRsyncTests(unittest.TestCase):
     def test_local_copy_and_noop(self):
         try:
-            binary = bsync.find_rsync()
+            binary = port.find_rsync()
         except RuntimeError as exc:
             self.skipTest(str(exc))
         with tempfile.TemporaryDirectory() as directory:
@@ -192,11 +192,11 @@ class RealRsyncTests(unittest.TestCase):
             (src / "clip [red] café.mov").write_bytes(os.urandom(2 * 1024 * 1024))
             (src / "empty").touch()
             (src / "link").symlink_to("empty")
-            history = bsync.History(root / "history.db")
+            history = port.History(root / "history.db")
             try:
-                with patch.dict(os.environ, {"BSYNC_RSYNC": binary}):
+                with patch.dict(os.environ, {"PORT_RSYNC": binary}):
                     for _ in range(2):
-                        self.assertEqual(bsync.run_transfer(history, str(src) + "/", str(dst) + "/",
+                        self.assertEqual(port.run_transfer(history, str(src) + "/", str(dst) + "/",
                                                            Console(file=io.StringIO())), 0)
                 self.assertEqual((src / "clip [red] café.mov").read_bytes(),
                                  (dst / "clip [red] café.mov").read_bytes())
@@ -204,8 +204,8 @@ class RealRsyncTests(unittest.TestCase):
                 self.assertEqual(history.get(1)["status"], "COMPLETED")
                 # -h rounds modern rsync's large byte counts (e.g. 2.10M).
                 self.assertAlmostEqual(history.get(1)["bytes_done"], 2097152, delta=10000)
-                with patch.dict(os.environ, {"BSYNC_RSYNC": binary}):
-                    self.assertNotEqual(bsync.run_transfer(history, str(root / "missing"), str(dst),
+                with patch.dict(os.environ, {"PORT_RSYNC": binary}):
+                    self.assertNotEqual(port.run_transfer(history, str(root / "missing"), str(dst),
                                                           Console(file=io.StringIO())), 0)
                 self.assertEqual(history.get(3)["status"], "CUTOFF")
             finally:

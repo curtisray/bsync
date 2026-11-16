@@ -22,33 +22,33 @@ def digest(path):
 
 def distributions(directory, tag):
     if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
-        raise ValueError("Use a stable release tag such as v0.2.1.")
+        raise ValueError("Use a stable release tag such as v0.3.0.")
     version = tag[1:]
     files = sorted([*directory.glob("*.whl"), *directory.glob("*.tar.gz")])
-    expected = {f"better_rsync-{version}-py3-none-any.whl", f"better_rsync-{version}.tar.gz"}
+    expected = {f"port-{version}-py3-none-any.whl", f"port-{version}.tar.gz"}
     if {path.name for path in files} != expected:
         raise ValueError(f"Expected only {sorted(expected)} in {directory}. Use a clean output folder.")
     for path in files:
         if path.suffix == ".whl":
             with zipfile.ZipFile(path) as archive:
-                metadata = archive.read(f"better_rsync-{version}.dist-info/METADATA")
+                metadata = archive.read(f"port-{version}.dist-info/METADATA")
         else:
             with tarfile.open(path) as archive:
-                metadata = archive.extractfile(f"better_rsync-{version}/PKG-INFO").read()
+                metadata = archive.extractfile(f"port-{version}/PKG-INFO").read()
         parsed = BytesParser().parsebytes(metadata)
-        if parsed["Name"] != "better-rsync" or parsed["Version"] != version:
+        if parsed["Name"] != "port" or parsed["Version"] != version:
             raise ValueError(f"Package metadata doesn't match {tag}: {path}")
     return files
 
 
 def formula(sdist, tag, resources):
     lines = [
-        "class Bsync < Formula",
+        "class Port < Formula",
         "  include Language::Python::Virtualenv",
         "",
         '  desc "Rsync with live progress, guided setup, and reversible local transfers"',
-        '  homepage "https://github.com/curtisray/bsync"',
-        f'  url "https://github.com/curtisray/bsync/releases/download/{tag}/{sdist.name}"',
+        '  homepage "https://github.com/curtisray/port"',
+        f'  url "https://github.com/curtisray/port/releases/download/{tag}/{sdist.name}"',
         f'  sha256 "{digest(sdist)}"',
         f'  version "{tag[1:]}"',
         '  license "MIT"',
@@ -70,12 +70,12 @@ def formula(sdist, tag, resources):
         "  end",
         "",
         "  test do",
-        '    assert_match version.to_s, shell_output("#{bin}/bsync --version")',
-        '    ENV["BSYNC_DB"] = testpath/"history.db"',
-        '    (testpath/"source.txt").write "bsync transfer test"',
-        '    system bin/"bsync", "run", testpath/"source.txt", testpath/"destination.txt"',
-        '    assert_equal "bsync transfer test", (testpath/"destination.txt").read',
-        '    assert_match "COMPLETED", shell_output("#{bin}/bsync history")',
+        '    assert_match version.to_s, shell_output("#{bin}/port --version")',
+        '    ENV["PORT_DB"] = testpath/"history.db"',
+        '    (testpath/"source.txt").write "port transfer test"',
+        '    system bin/"port", "run", testpath/"source.txt", testpath/"destination.txt"',
+        '    assert_equal "port transfer test", (testpath/"destination.txt").read',
+        '    assert_match "COMPLETED", shell_output("#{bin}/port history")',
         "  end",
         "end",
         "",
@@ -98,9 +98,9 @@ def main():
         return
     resources = json.loads(Path(__file__).with_name("homebrew-resources.json").read_text())
     sdist = next(path for path in files if path.name.endswith(".tar.gz"))
-    (args.dist / "bsync.rb").write_text(formula(sdist, args.tag, resources))
+    (args.dist / "port.rb").write_text(formula(sdist, args.tag, resources))
     (args.dist / "SHA256SUMS").write_text(sums)
-    print("Prepared bsync.rb and SHA256SUMS alongside validated release distributions.")
+    print("Prepared port.rb and SHA256SUMS alongside validated release distributions.")
 
 
 if __name__ == "__main__":

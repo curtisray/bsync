@@ -13,31 +13,31 @@ class ReleaseTests(unittest.TestCase):
     def test_checks_versions_and_distribution_set(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            wheel = root / "better_rsync-0.2.1-py3-none-any.whl"
-            sdist = root / "better_rsync-0.2.1.tar.gz"
-            metadata = b"Name: better-rsync\nVersion: 0.2.1\n"
+            wheel = root / "port-0.3.0-py3-none-any.whl"
+            sdist = root / "port-0.3.0.tar.gz"
+            metadata = b"Name: port\nVersion: 0.3.0\n"
             with zipfile.ZipFile(wheel, "w") as archive:
-                archive.writestr("better_rsync-0.2.1.dist-info/METADATA", metadata)
+                archive.writestr("port-0.3.0.dist-info/METADATA", metadata)
             with tarfile.open(sdist, "w:gz") as archive:
-                item = tarfile.TarInfo("better_rsync-0.2.1/PKG-INFO")
+                item = tarfile.TarInfo("port-0.3.0/PKG-INFO")
                 item.size = len(metadata)
                 archive.addfile(item, io.BytesIO(metadata))
-            self.assertEqual(len(distributions(root, "v0.2.1")), 2)
+            self.assertEqual(len(distributions(root, "v0.3.0")), 2)
             with self.assertRaises(ValueError):
                 distributions(root, "v0.2.2")
             with self.assertRaises(ValueError):
                 distributions(root, "main")
             with zipfile.ZipFile(wheel, "w") as archive:
-                archive.writestr("better_rsync-0.2.1.dist-info/METADATA", b"Name: bsync\nVersion: 0.2.1\n")
+                archive.writestr("port-0.3.0.dist-info/METADATA", b"Name: wrong-project\nVersion: 0.3.0\n")
             with self.assertRaises(ValueError):
-                distributions(root, "v0.2.1")
+                distributions(root, "v0.3.0")
 
     def test_formula_pins_sources_resources_and_system_dependencies(self):
         with tempfile.TemporaryDirectory() as directory:
-            sdist = Path(directory) / "better_rsync-0.2.1.tar.gz"
+            sdist = Path(directory) / "port-0.3.0.tar.gz"
             sdist.write_bytes(b"test release")
             resources = json.loads((Path(__file__).resolve().parents[1] / "scripts/homebrew-resources.json").read_text())
-            result = formula(sdist, "v0.2.1", resources)
+            result = formula(sdist, "v0.3.0", resources)
             self.assertIn(digest(sdist), result)
             self.assertIn('depends_on "rsync"', result)
             self.assertIn('depends_on "python@3.14"', result)

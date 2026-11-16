@@ -1,19 +1,24 @@
 # Distribution and releases
 
-bsync targets macOS and POSIX Linux. The distribution is named **better-rsync**
-because [bsync on PyPI](https://pypi.org/project/bsync/) is an unrelated project.
-The Python import and installed command remain `bsync`.
+Port (formerly bsync) targets macOS and POSIX Linux. The distribution, Python
+import, and primary installed command are all named **port**. The `bsync`
+command remains as a compatibility entry point. The PyPI name was unlisted at
+the time of the rename; registration is not guaranteed until the first upload.
+
+MacPorts also uses a command called `port`. Document this collision and use a
+fully qualified executable path or the `bsync` compatibility command when both
+tools are installed.
 
 ## Channels
 
 | Channel | Install | Availability |
 | --- | --- | --- |
-| Homebrew tap | `brew install curtisray/tap/bsync` | Published in `curtisray/homebrew-tap` |
-| pipx via GitHub | `pipx install 'git+https://github.com/curtisray/bsync.git@v0.2.1'` | After the v0.2.1 tag is published |
-| uv via GitHub | `uv tool install 'git+https://github.com/curtisray/bsync.git@v0.2.1'` | After the v0.2.1 tag is published |
-| pipx via PyPI | `pipx install better-rsync` | Requires the PyPI activation below |
-| uv via PyPI | `uv tool install better-rsync` | Requires the same PyPI activation |
-| pip via PyPI | `pip install better-rsync` inside a venv | Requires the same PyPI activation |
+| Homebrew tap | `brew install curtisray/tap/port` | Published in `curtisray/homebrew-tap` |
+| pipx via GitHub | `pipx install 'git+https://github.com/curtisray/port.git@v0.3.0'` | After the v0.3.0 tag is published |
+| uv via GitHub | `uv tool install 'git+https://github.com/curtisray/port.git@v0.3.0'` | After the v0.3.0 tag is published |
+| pipx via PyPI | `pipx install port` | Requires the PyPI activation below |
+| uv via PyPI | `uv tool install port` | Requires the same PyPI activation |
+| pip via PyPI | `pip install port` inside a venv | Requires the same PyPI activation |
 | apt/dnf/pacman, Nix, Conda | Separate downstream recipes | Not yet published |
 | Winget/Scoop/Chocolatey | Requires a native Windows port first | Unsupported; use WSL today |
 
@@ -31,19 +36,19 @@ as dependencies and is therefore the simplest complete install.
 
    | Field | Value |
    | --- | --- |
-   | PyPI project name | `better-rsync` |
+   | PyPI project name | `port` |
    | GitHub owner | `curtisray` |
-   | Repository | `bsync` |
+   | Repository | `port` |
    | Workflow filename | `publish-pypi.yml` |
    | Environment | `pypi` |
 
 3. Create the GitHub environment named `pypi` in the repository's settings
    if it does not exist. Restrict it to trusted maintainers as appropriate.
-4. In GitHub Actions, run **Publish to PyPI** from `main`, with `tag: v0.2.1`
+4. In GitHub Actions, run **Publish to PyPI** from `main`, with `tag: v0.3.0`
    (or the existing GitHub release to publish).
 5. Confirm the new release appears at
-   `https://pypi.org/project/better-rsync/`, then update the README's PyPI
-   availability language and test a fresh `pipx install better-rsync`.
+   `https://pypi.org/project/port/`, then update the README's PyPI
+   availability language and test a fresh `pipx install port`.
 
 The workflow downloads the existing release wheel and sdist, checks their metadata
 and SHA-256 checksums, and publishes the same artifacts using PyPI Trusted
@@ -52,23 +57,23 @@ does not reserve the name; availability must still be checked before first uploa
 
 ## Releasing a new version
 
-1. Change `__version__` in `bsync.py`. Package metadata reads this value directly.
+1. Change `__version__` in `port.py`. Package metadata reads this value directly.
 2. Run the tests and review the diff. Push the version commit to `main`.
 3. Create and push an annotated stable tag, for example:
 
    ```sh
-   git tag -a v0.2.2 -m 'Release bsync 0.2.2'
-   git push origin v0.2.2
+   git tag -a v0.3.1 -m 'Release Port 0.3.1'
+   git push origin v0.3.1
    ```
 
 4. The **Release** workflow runs the macOS/Linux and Python 3.10/3.14 test matrix,
    builds a source distribution and wheel, checks package metadata with Twine,
    and publishes a GitHub release containing:
-   - `better_rsync-<version>.tar.gz`
-   - `better_rsync-<version>-py3-none-any.whl`
+   - `port-<version>.tar.gz`
+   - `port-<version>-py3-none-any.whl`
    - `SHA256SUMS` (checksums of both distributions)
-   - `bsync.rb` (the generated Homebrew formula)
-5. Copy the release's `bsync.rb` into `Formula/bsync.rb` in
+   - `port.rb` (the generated Homebrew formula)
+5. Copy the release's `port.rb` into `Formula/port.rb` in
    `curtisray/homebrew-tap`, test it with Homebrew, then commit and push the tap.
 6. Once PyPI is activated, run **Publish to PyPI** with the same release tag.
 
@@ -82,10 +87,10 @@ Use a fresh output directory so old versions are not accidentally released:
 
 ```sh
 python -m pip install build twine
-python -m build --outdir /tmp/bsync-release
-python -m twine check /tmp/bsync-release/*
-python scripts/prepare_release.py --tag v0.2.1 --dist /tmp/bsync-release
-python scripts/prepare_release.py --tag v0.2.1 --dist /tmp/bsync-release --verify
+python -m build --outdir /tmp/port-release
+python -m twine check /tmp/port-release/*
+python scripts/prepare_release.py --tag v0.3.0 --dist /tmp/port-release
+python scripts/prepare_release.py --tag v0.3.0 --dist /tmp/port-release --verify
 ```
 
 `scripts/homebrew-resources.json` pins versions, universal wheel URLs, and SHA-256
@@ -98,8 +103,8 @@ and must satisfy Homebrew's current acceptance policy.
 ## Additional managers
 
 Homebrew core is a separate reviewed submission; maintaining a working tap does
-not automatically make `brew install bsync` available. Until accepted, use the
-fully qualified `brew install curtisray/tap/bsync`.
+not automatically make `brew install port` available. Until accepted, use the
+fully qualified `brew install curtisray/tap/port`.
 
 For Linux, the next useful additions are an AUR PKGBUILD, a Nix package, and a
 Conda-forge recipe. Debian/Ubuntu and Fedora support require maintained packages

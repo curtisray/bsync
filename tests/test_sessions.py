@@ -18,15 +18,15 @@ from unittest.mock import patch
 
 from rich.console import Console
 
-import bsync
-from bsync_sessions import Session, inventory, remove_owned
-from bsync_ui import FlowView
+import port
+from port_sessions import Session, inventory, remove_owned
+from port_ui import FlowView
 
 
 class SessionTests(unittest.TestCase):
     def setUp(self):
         try:
-            bsync.find_rsync()
+            port.find_rsync()
         except RuntimeError as exc:
             self.skipTest(str(exc))
         self.temp = tempfile.TemporaryDirectory()
@@ -41,7 +41,7 @@ class SessionTests(unittest.TestCase):
         self.dest.mkdir()
         self.other = self.root / "other"
         self.other.mkdir()
-        self.history = bsync.History(self.root / "history.db")
+        self.history = port.History(self.root / "history.db")
         self.console = Console(file=io.StringIO(), width=100)
 
     def tearDown(self):
@@ -104,12 +104,12 @@ class SessionTests(unittest.TestCase):
 
     def test_resume_keeps_entire_plan(self):
         session = self.session(destinations=[self.dest, self.other])
-        original = bsync.run_transfer
+        original = port.run_transfer
         calls = []
         def interrupted(*args, **kwargs):
             calls.append(args)
             return original(*args, **kwargs) if len(calls) == 1 else 130
-        with patch("bsync.run_transfer", side_effect=interrupted):
+        with patch("port.run_transfer", side_effect=interrupted):
             self.assertEqual(session.run(self.console), 130)
         self.assertEqual(session.status, "CUTOFF")
         self.assertEqual(len(session.state["done"]), 1)
@@ -158,7 +158,7 @@ class SessionTests(unittest.TestCase):
         session = self.session()
         session.save("RUNNING")
         self.history.close()
-        self.history = bsync.History(self.root / "history.db")
+        self.history = port.History(self.root / "history.db")
         recovered = Session.load(self.history, session.id)
         self.assertEqual(recovered.status, "CUTOFF")
         self.assertEqual(recovered.run(self.console), 0)
@@ -168,7 +168,7 @@ class SessionTests(unittest.TestCase):
                           status TEXT, bytes_done INTEGER, pct REAL, started_at TEXT, ended_at TEXT)""")
             db.execute("INSERT INTO transfers VALUES (1,'a','b','RUNNING',1024,50,'2026-01-01',NULL)")
             db.commit()
-        migrated = bsync.History(legacy_path)
+        migrated = port.History(legacy_path)
         try:
             self.assertIsNone(migrated.get(1)["session_id"])
             self.assertEqual(migrated.get(1)["bytes_done"], 1024)
@@ -180,7 +180,7 @@ class SessionTests(unittest.TestCase):
         for width in (60, 100):
             stream = io.StringIO()
             console = Console(file=stream, width=width)
-            console.print(FlowView(bsync.Snapshot(pct=39), "/source", "/destination", 1, undo=True))
+            console.print(FlowView(port.Snapshot(pct=39), "/source", "/destination", 1, undo=True))
             output = stream.getvalue()
             self.assertIn("61% remaining", output)
             self.assertIn("39% synced", output)
@@ -191,8 +191,8 @@ class SessionTests(unittest.TestCase):
         # Exercise actual arrows/Enter, path prompts, review, copy, and menu exit.
         master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 36, 100, 0, 0))
-        process = subprocess.Popen([sys.executable, "-m", "bsync"], stdin=slave, stdout=slave, stderr=slave,
-                                   env={**os.environ, "TERM": "xterm-256color", "BSYNC_DB": str(self.root / "wizard.db")})
+        process = subprocess.Popen([sys.executable, "-m", "port"], stdin=slave, stdout=slave, stderr=slave,
+                                   env={**os.environ, "TERM": "xterm-256color", "PORT_DB": str(self.root / "wizard.db")})
         os.close(slave)
         transcript = b""
         def wait_for(text):

@@ -79,7 +79,7 @@ class FlowView:
         width = options.max_width
         pct = max(0, min(100, self.state.pct))
         status = "COMPLETED" if self.finished else "PAUSED" if self.paused else "TRANSFERRING"
-        yield Text.assemble(("bsync ", "bold cyan"), ("/ data in motion", "dim"))
+        yield Text.assemble(("port ", "bold cyan"), ("/ data in motion", "dim"))
         yield Text(f"\n{status}  ·  Transfer #{self.job_id}  {self.context}", style="bold")
         if width >= 72:
             size = max(20, (width - 11) // 2)
@@ -113,7 +113,7 @@ def choose(console, title, description, choices):
     rendered = None
     with Keyboard() as keys, Live(console=console, screen=True, auto_refresh=False) as live:
         while True:
-            items = [Text("bsync", style="bold cyan"), Text(description, style="dim"), Text("")]
+            items = [Text("port", style="bold cyan"), Text(description, style="dim"), Text("")]
             for number, (label, help_text, _) in enumerate(choices):
                 selected = number == index
                 items.append(Text(f"{'›' if selected else ' '} {number+1}. {label}",
@@ -139,7 +139,7 @@ def choose(console, title, description, choices):
 
 def heading(console, step, message):
     console.clear()
-    console.print(Panel(Text(message), title=f"bsync / {step}", border_style="cyan"))
+    console.print(Panel(Text(message), title=f"port / {step}", border_style="cyan"))
 
 
 def ask_paths(console, title, source=False, multiple=True):
@@ -172,8 +172,8 @@ def ask_paths(console, title, source=False, multiple=True):
 
 
 def launcher(history, console):
-    from bsync import show_history
-    from bsync_sessions import Session
+    from port import show_history
+    from port_sessions import Session
     while True:
         action = choose(console, "Welcome", "Copy or move files with a clear view of where they’re going.", [
             ("New transfer", "Guided setup · sources, destinations, and a review before starting", "run"),
@@ -201,7 +201,7 @@ def launcher(history, console):
                 ])
                 if many is None:
                     continue
-                heading(console, "4 / Destinations", "Choose existing folders. A named bsync session folder keeps this transfer separate and reversible.")
+                heading(console, "4 / Destinations", "Choose existing folders. A named port session folder keeps this transfer separate and reversible.")
                 destinations = ask_paths(console, "Destination folder", multiple=many)
                 plan = Session.plan(sources, destinations, mode)
                 heading(console, "5 / Review", f"{mode.upper()} · {len(sources)} source(s) · {len(destinations)} destination(s)")
@@ -229,7 +229,7 @@ def launcher(history, console):
                     console.print("Transfer undone.", style="green")
                     Prompt.ask("Press Enter to return", default="", console=console)
             elif action == "resume":
-                from bsync import resume_job
+                from port import resume_job
                 value = pick_session(history, console, "resume")
                 if value:
                     if value == "direct":
